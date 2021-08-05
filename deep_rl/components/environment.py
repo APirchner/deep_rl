@@ -59,7 +59,7 @@ def get_environment(frame_size: int, path: str, seed: int = 170990) -> gym.Env:
     #   1. jump right
     #   2. walk left
     #   3. jump left
-    env = JoypadSpace(env, [['right'], ['right', 'A'], ['left'], ['left', 'A']])
+    env = JoypadSpace(env, [['right'], ['right', 'A']])
     env = gym.wrappers.Monitor(env, path)
     env = SkipFrame(env, 4)
     env = PermuteObservation(env)
