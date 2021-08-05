@@ -8,3 +8,4 @@ gamma: 0.99
 eps: 1.0
 eps_min: 0.1
 eps_decay: 0.99999
+update_steps: 200

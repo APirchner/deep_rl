@@ -52,7 +52,7 @@ class GrayScaleResizeObservation(gym.ObservationWrapper):
         ])
         return transform(observation).squeeze()
 
-def get_environment(monitor: bool = False, frame_size: int = 128, seed: int = 170990) -> gym.Env:
+def get_environment(frame_size: Tuple[int], path: str, seed: int = 170990) -> gym.Env:
     env = gym_super_mario_bros.make('SuperMarioBros-1-1-v0')
     # Limit the action-space to
     #   0. walk right
@@ -60,8 +60,7 @@ def get_environment(monitor: bool = False, frame_size: int = 128, seed: int = 17
     #   2. walk left
     #   3. jump left
     env = JoypadSpace(env, [['right'], ['right', 'A'], ['left'], ['left', 'A']])
-    if monitor:
-        env = gym.wrappers.Monitor(env, 'recordings', force=True)
+    env = gym.wrappers.Monitor(env, path)
     env = SkipFrame(env, 4)
     env = PermuteObservation(env)
     env = GrayScaleResizeObservation(env, frame_size)

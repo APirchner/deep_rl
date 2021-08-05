@@ -1,12 +1,16 @@
+import os
 from abc import ABC, abstractmethod
 from typing import Tuple, Dict, Any
+import logging
 
-import gym.wrappers
 import numpy as np
 import torch
 import gym
+from torch.utils.tensorboard import SummaryWriter
 
 from deep_rl.components.buffers import ReplayBuffer, Transition
+
+log = logging.getLogger(__name__)
 
 
 class Agent(ABC):
@@ -20,6 +24,7 @@ class Agent(ABC):
             eps: float,
             eps_min: float,
             eps_decay: float,
+            update_steps: int,
             test: bool = False,
             cuda: bool = True
     ):
@@ -30,7 +35,9 @@ class Agent(ABC):
         self.eps = eps
         self.eps_min = eps_min
         self.eps_decay = eps_decay
+        self.update_steps = update_steps
         self.test = test
+        self.tb_writer = SummaryWriter()
         self.device = torch.device(
             'cuda' if torch.cuda.is_available() and cuda else 'cpu'
         )
@@ -40,61 +47,87 @@ class Agent(ABC):
         raise NotImplementedError('_loss')
 
     @abstractmethod
-    def _train_step(self):
+    def _train_step(self, sample_steps: Transition) -> float:
         raise NotImplementedError('_train_step')
 
     @abstractmethod
-    def _select_action(self, state: np.ndarray) -> int:
+    def _select_action(self, state: torch.Tensor) -> int:
         raise NotImplementedError('_select_action')
+
+    @abstractmethod
+    def _update_target(self):
+        raise NotImplementedError('_update_target')
+
+    @abstractmethod
+    def _save_state(self, path: str):
+        raise NotImplementedError('_save_state')
 
     def _write_to_buffer(
             self,
-            state: torch.Tensor,
-            next_state: torch.Tensor,
+            state: np.ndarray,
+            next_state: np.ndarray,
             action: int,
             reward: float,
             done: bool
     ) -> None:
         self.replay_buffer.add(
-            torch.tensor(state, dtype=torch.float),
-            torch.tensor(next_state, dtype=torch.float),
-            torch.tensor(action),
-            torch.tensor(reward),
-            torch.tensor(done)
+            state=torch.tensor(state, dtype=torch.float),
+            next_state=torch.tensor(next_state, dtype=torch.float),
+            action=torch.tensor(action),
+            reward=torch.tensor(reward, dtype=torch.float),
+            done=torch.tensor(done, dtype=torch.float)
         )
 
-    def action(self, state: torch.Tensor) -> int:
-        if self.eps > np.random.random():
+    def action(self, state: np.ndarray) -> int:
+        if not self.test and self.eps > np.random.random():
             # exploration
             action = self.env.action_space.sample()
         else:
             # exploitation
-            action = self._select_action(state)
+            action = self._select_action(torch.tensor(state, dtype=torch.float))
         self.eps = max(self.eps_min, self.eps * self.eps_decay)
         return action
 
-    def step(self, state: torch.Tensor) -> Tuple[np.ndarray, float, bool, Dict[str, Any]]:
+    def step(self, state: np.ndarray) -> Tuple[np.ndarray, float, bool, Dict[str, Any]]:
+        state = state.__array__()
         action = self.action(state)
         state_new, reward, is_done, info = self.env.step(action)
-        self._write_to_buffer(state, state_new.__array__(), action, reward, is_done) if not self.test else None
+        self._write_to_buffer(
+            state, state_new.__array__(), action, reward, is_done
+        ) if not self.test else None
         return state_new, reward, is_done, info
 
     def train(self, frames: int):
         self.test = False
 
         rewards = []
+        scores = []
+        losses = []
         score = 0
 
         state = self.env.reset()
-        for _ in range(frames):
-            state_next, reward, is_done, info = self.step(torch.tensor(state.__array__(), dtype=torch.float))
+        for i in range(frames):
+            state_next, reward, is_done, info = self.step(state.__array__())
             rewards.append(reward)
             score += reward
             if is_done or info['flag_get']:
                 state = self.env.reset()
+                scores.append(score)
                 score = 0
             if len(self.replay_buffer) < self.replay_buffer.batch_size:
                 continue
             batch = self.replay_buffer.sample()
-            loss = self._loss(batch)
-            # TODO: agent update when memory buffer is at least batch size
+            loss = self._train_step(batch)
+            losses.append(loss)
+            if i % self.update_steps == 0:
+                self._update_target()
+            if i % 1000 == 0:
+                mean_score = np.array(scores).mean()
+                mean_loss = np.array(losses).mean()
+                log.info(f'Step {i} - Score: {score} | Loss: {loss}')
+                self.tb_writer.add_scalar('Score', mean_score, i)
+                self.tb_writer.add_scalar('Loss', mean_loss, i)
+                scores = []
+                losses = []
+            if i % 100_000 == 0:
+                self._save_state(os.path.join(os.getcwd(), f'checkpoint_step_{i}'))

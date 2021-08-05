@@ -8,6 +8,7 @@ trainer:
   frames: 10_000_000
   stack_frames: 4
   observation_size: 128
+  logdir: ''
 
 defaults:
   - agent: ddqn

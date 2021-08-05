@@ -1,4 +1,4 @@
-from argparse import ArgumentParser
+import os
 
 import hydra
 from omegaconf import DictConfig
@@ -17,7 +17,7 @@ def train(cfg: DictConfig) -> None:
 
     np.random.seed(cfg.trainer.seed)
     seed_torch(cfg.trainer.seed)
-    env = get_environment(False, 128, cfg.trainer.seed)
+    env = get_environment(128, os.getcwd(), cfg.trainer.seed)
 
     agent = hydra.utils.instantiate(
         cfg.agent,
