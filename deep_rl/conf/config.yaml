@@ -1,0 +1,14 @@
+hydra:
+  run:
+    dir: test
+
+trainer:
+  seed: 1234
+  cuda: True
+  frames: 10_000_000
+  stack_frames: 4
+  observation_size: 128
+
+defaults:
+  - agent: ddqn
+  - optim: adam
