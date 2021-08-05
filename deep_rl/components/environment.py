@@ -41,7 +41,7 @@ class PermuteObservation(gym.ObservationWrapper):
 
 
 class GrayScaleResizeObservation(gym.ObservationWrapper):
-    def __init__(self, env: gym.Env, size: Tuple[int]):
+    def __init__(self, env: gym.Env, size: int):
         super(GrayScaleResizeObservation, self).__init__(env)
         self._size = size
 
@@ -52,7 +52,7 @@ class GrayScaleResizeObservation(gym.ObservationWrapper):
         ])
         return transform(observation).squeeze()
 
-def get_environment(frame_size: Tuple[int], path: str, seed: int = 170990) -> gym.Env:
+def get_environment(frame_size: int, path: str, seed: int = 170990) -> gym.Env:
     env = gym_super_mario_bros.make('SuperMarioBros-1-1-v0')
     # Limit the action-space to
     #   0. walk right
