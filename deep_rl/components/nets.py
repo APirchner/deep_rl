@@ -17,19 +17,19 @@ class QNet(nn.Module):
             nn.Conv2d(in_channels=c, out_channels=32, kernel_size=3, stride=2),
             nn.BatchNorm2d(num_features=32),
             nn.ReLU(),
-            nn.Dropout2d(p=0.25),
+            nn.Dropout2d(p=0.2),
             nn.Conv2d(in_channels=32, out_channels=64, kernel_size=3, stride=2),
             nn.BatchNorm2d(num_features=64),
             nn.ReLU(),
-            nn.Dropout2d(p=0.25),
+            nn.Dropout2d(p=0.2),
             nn.Conv2d(in_channels=64, out_channels=64, kernel_size=3, stride=1),
             nn.BatchNorm2d(num_features=64),
             nn.ReLU(),
-            nn.Dropout2d(p=0.25),
+            nn.Dropout2d(p=0.2),
             nn.Flatten(),
             nn.Linear(in_features=flat_size, out_features=512),
             nn.ReLU(),
-            nn.Dropout2d(p=0.25),
+            nn.Dropout2d(p=0.2),
             nn.Linear(in_features=512, out_features=num_actions)
         )
 

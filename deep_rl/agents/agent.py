@@ -110,7 +110,7 @@ class Agent(ABC):
             state_next, reward, is_done, info = self.step(state.__array__())
             rewards.append(reward)
             score += reward
-            if is_done or info['flag_get']:
+            if is_done:
                 state = self.env.reset()
                 scores.append(score)
                 score = 0
@@ -122,12 +122,12 @@ class Agent(ABC):
             if i % self.update_steps == 0:
                 self._update_target()
             if i % 1000 == 0:
-                mean_score = np.array(scores).mean()
-                mean_loss = np.array(losses).mean()
+                mean_score = np.array(scores).mean() if len(scores) > 0 else 0
+                mean_loss = np.array(losses).mean() if len(losses) > 0 else 0
                 log.info(f'Step {i} - Score: {score} | Loss: {loss}')
                 self.tb_writer.add_scalar('Score', mean_score, i)
                 self.tb_writer.add_scalar('Loss', mean_loss, i)
                 scores = []
                 losses = []
-            if i % 100_000 == 0:
+            if i % 100000 == 0:
                 self._save_state(os.path.join(os.getcwd(), f'checkpoint_step_{i}'))

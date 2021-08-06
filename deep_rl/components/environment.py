@@ -6,6 +6,7 @@ from torchvision import transforms as T
 import gym
 from nes_py.wrappers import JoypadSpace
 import gym_super_mario_bros
+from gym_super_mario_bros.actions import SIMPLE_MOVEMENT
 
 
 class SkipFrame(gym.Wrapper):
@@ -53,13 +54,8 @@ class GrayScaleResizeObservation(gym.ObservationWrapper):
         return transform(observation).squeeze()
 
 def get_environment(frame_size: int, path: str, seed: int = 170990) -> gym.Env:
-    env = gym_super_mario_bros.make('SuperMarioBros-1-1-v0')
-    # Limit the action-space to
-    #   0. walk right
-    #   1. jump right
-    #   2. walk left
-    #   3. jump left
-    env = JoypadSpace(env, [['right'], ['right', 'A']])
+    env = gym_super_mario_bros.make('SuperMarioBros-v0')
+    env = JoypadSpace(env, SIMPLE_MOVEMENT)
     env = gym.wrappers.Monitor(env, path)
     env = SkipFrame(env, 4)
     env = PermuteObservation(env)

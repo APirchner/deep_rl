@@ -1,7 +1,3 @@
-hydra:
-  run:
-    dir: test
-
 trainer:
   seed: 1234
   cuda: True
