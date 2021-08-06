@@ -53,8 +53,11 @@ class GrayScaleResizeObservation(gym.ObservationWrapper):
         ])
         return transform(observation).squeeze()
 
-def get_environment(frame_size: int, path: str, seed: int = 170990) -> gym.Env:
-    env = gym_super_mario_bros.make('SuperMarioBros-v0')
+def get_environment(frame_size: int, path: str, random_stages: bool = True, seed: int = 170990) -> gym.Env:
+    if random_stages:
+        env = gym_super_mario_bros.make('SuperMarioBrosRandomStages-v0')
+    else:
+        env = gym_super_mario_bros.make('SuperMarioBros-v0')
     env = JoypadSpace(env, SIMPLE_MOVEMENT)
     env = gym.wrappers.Monitor(env, path)
     env = SkipFrame(env, 4)
