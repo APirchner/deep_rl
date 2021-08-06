@@ -23,7 +23,6 @@ class Agent(ABC):
             gamma: float,
             eps: float,
             eps_min: float,
-            eps_decay: float,
             update_steps: int,
             test: bool = False,
             cuda: bool = True
@@ -34,7 +33,6 @@ class Agent(ABC):
         self.gamma = gamma
         self.eps = eps
         self.eps_min = eps_min
-        self.eps_decay = eps_decay
         self.update_steps = update_steps
         self.test = test
         self.tb_writer = SummaryWriter()
@@ -85,7 +83,7 @@ class Agent(ABC):
         else:
             # exploitation
             action = self._select_action(torch.tensor(state, dtype=torch.float))
-        self.eps = max(self.eps_min, self.eps * self.eps_decay)
+        self.eps = max(self.eps_min, self.eps)
         return action
 
     def step(self, state: np.ndarray) -> Tuple[np.ndarray, float, bool, Dict[str, Any]]:
@@ -99,7 +97,7 @@ class Agent(ABC):
 
     def train(self, frames: int):
         self.test = False
-
+        eps_decay = (self.eps - self.eps_min) / frames
         rewards = []
         scores = []
         losses = []
@@ -108,6 +106,7 @@ class Agent(ABC):
         state = self.env.reset()
         for i in range(frames):
             state_next, reward, is_done, info = self.step(state.__array__())
+            self.eps = self.eps - eps_decay
             rewards.append(reward)
             score += reward
             if is_done:
