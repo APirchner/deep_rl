@@ -2,10 +2,10 @@ _args_:
   - env
   - observation_size
   - optim_conf
-buffer_size: 25_000
+buffer_size: 50_000
 batch_size: 128
-gamma: 0.99
+gamma: 0.9
 eps: 1.0
 eps_min: 0.01
-eps_decay: 0.9999
+eps_decay: 0.999999
 update_steps: 10_000

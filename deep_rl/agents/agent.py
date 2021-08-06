@@ -124,10 +124,10 @@ class Agent(ABC):
             if i % 1000 == 0:
                 mean_score = np.array(scores).mean() if len(scores) > 0 else 0
                 mean_loss = np.array(losses).mean() if len(losses) > 0 else 0
-                log.info(f'Step {i} - Score: {score} | Loss: {loss}')
+                log.info(f'Step {i} - Score: {mean_score} | Loss: {mean_loss}')
                 self.tb_writer.add_scalar('Score', mean_score, i)
                 self.tb_writer.add_scalar('Loss', mean_loss, i)
-                scores = []
+                self.tb_writer.add_scalar('Eps', self.eps, i)
                 losses = []
             if i % 100000 == 0:
                 self._save_state(os.path.join(os.getcwd(), f'checkpoint_step_{i}'))
