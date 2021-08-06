@@ -17,7 +17,7 @@ def train(cfg: DictConfig) -> None:
 
     np.random.seed(cfg.trainer.seed)
     seed_torch(cfg.trainer.seed)
-    env = get_environment(128, os.getcwd(), cfg.trainer.seed)
+    env = get_environment(cfg.trainer.observation_size, os.getcwd(), cfg.trainer.random_stage, cfg.trainer.seed)
 
     agent = hydra.utils.instantiate(
         cfg.agent,

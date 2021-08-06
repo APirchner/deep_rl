@@ -98,7 +98,6 @@ class Agent(ABC):
     def train(self, frames: int):
         self.test = False
         eps_decay = (self.eps - self.eps_min) / frames
-        rewards = []
         scores = []
         losses = []
         score = 0
@@ -107,26 +106,33 @@ class Agent(ABC):
         for i in range(frames):
             state_next, reward, is_done, info = self.step(state.__array__())
             self.eps = self.eps - eps_decay
-            rewards.append(reward)
             score += reward
-            if is_done:
-                state = self.env.reset()
-                scores.append(score)
-                score = 0
             if len(self.replay_buffer) < self.replay_buffer.batch_size:
                 continue
+
+            # training
             batch = self.replay_buffer.sample()
             loss = self._train_step(batch)
             losses.append(loss)
+
+            # target update
             if i % self.update_steps == 0:
                 self._update_target()
+
+            # logging
             if i % 1000 == 0:
                 mean_score = np.array(scores).mean() if len(scores) > 0 else 0
-                mean_loss = np.array(losses).mean() if len(losses) > 0 else 0
+                mean_loss = np.array(losses).mean()
                 log.info(f'Step {i} - Score: {mean_score} | Loss: {mean_loss}')
                 self.tb_writer.add_scalar('Score', mean_score, i)
                 self.tb_writer.add_scalar('Loss', mean_loss, i)
                 self.tb_writer.add_scalar('Eps', self.eps, i)
                 losses = []
+                scores = []
             if i % 100000 == 0:
                 self._save_state(os.path.join(os.getcwd(), f'checkpoint_step_{i}'))
+            if is_done:
+                # end of episode
+                scores.append(score)
+                score = 0
+                state = self.env.reset()

@@ -2,3 +2,4 @@
 venv
 test
 outputs
+__pycache__
