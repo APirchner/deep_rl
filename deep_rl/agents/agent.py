@@ -107,7 +107,7 @@ class Agent(ABC):
             state_next, reward, is_done, info = self.step(state.__array__())
             self.eps = self.eps - eps_decay
             score += reward
-            if len(self.replay_buffer) < self.replay_buffer.batch_size:
+            if len(self.replay_buffer) < 5 * self.replay_buffer.batch_size:
                 continue
 
             # training
