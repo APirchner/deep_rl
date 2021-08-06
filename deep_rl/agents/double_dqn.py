@@ -51,8 +51,8 @@ class DoubleDQN(Agent):
         return q_next
 
     def _train_step(self, sample_steps: Transition) -> float:
-        self.dqn.zero_grad()
         loss = self._loss(sample_steps)
+        self.optimizer.zero_grad()
         loss.backward()
         self.optimizer.step()
         return loss.detach().cpu().item()
