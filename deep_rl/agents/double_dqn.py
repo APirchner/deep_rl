@@ -1,7 +1,6 @@
 from typing import Tuple
 
 import hydra
-import numpy as np
 from omegaconf import DictConfig
 import torch
 import torch.nn.functional as F
@@ -19,20 +18,23 @@ class DoubleDQN(Agent):
         self.dqn = QNet(input_dim=self.observation_size, num_actions=self.env.action_space.n).to(self.device)
         self.dqn_target = QNet(input_dim=self.observation_size, num_actions=self.env.action_space.n).to(self.device)
         self.dqn_target.load_state_dict(self.dqn.state_dict())
+        for p in self.dqn_target.parameters():
+            p.requires_grad = False
         self.dqn_target.eval()
 
         self.optimizer = hydra.utils.instantiate(
             optimizer_conf, params=self.dqn.parameters()
         )  # type: torch.optim.Optimizer
 
+    @torch.no_grad()
     def _select_action(self, state: torch.Tensor) -> int:
         state_tensor = torch.unsqueeze(state, 0).to(self.device)
         action = self.dqn(state_tensor).argmax().detach().cpu().item()
         return action
 
     def _loss(self, sample_steps: Transition) -> torch.Tensor:
-        state = sample_steps.state.to(self.device)
-        next_state = sample_steps.next_state.to(self.device)
+        state = sample_steps.state.float().to(self.device)
+        next_state = sample_steps.next_state.float().to(self.device)
         action = sample_steps.action.reshape(-1, 1).to(self.device)
         reward = sample_steps.reward.reshape(-1, 1).to(self.device)
         done = sample_steps.done.reshape(-1, 1).to(self.device)

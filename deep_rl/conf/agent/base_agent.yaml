@@ -2,8 +2,8 @@ _args_:
   - env
   - observation_size
   - optim_conf
-buffer_size: 50_000
-batch_size: 128
+buffer_size: 100_000
+batch_size: 64
 gamma: 0.9
 eps: 1.0
 eps_min: 0.01

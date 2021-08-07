@@ -69,8 +69,8 @@ class Agent(ABC):
             done: bool
     ) -> None:
         self.replay_buffer.add(
-            state=torch.tensor(state, dtype=torch.float),
-            next_state=torch.tensor(next_state, dtype=torch.float),
+            state=torch.tensor(state, dtype=torch.uint8),
+            next_state=torch.tensor(next_state, dtype=torch.uint8),
             action=torch.tensor(action),
             reward=torch.tensor(reward, dtype=torch.float),
             done=torch.tensor(done, dtype=torch.float)
@@ -97,7 +97,7 @@ class Agent(ABC):
 
     def train(self, frames: int):
         self.test = False
-        eps_decay = (self.eps - self.eps_min) / frames
+        eps_decay = 5 * (self.eps - self.eps_min) / frames
         scores = []
         losses = []
         score = 0
@@ -107,7 +107,14 @@ class Agent(ABC):
             state_next, reward, is_done, info = self.step(state.__array__())
             self.eps = self.eps - eps_decay
             score += reward
-            if len(self.replay_buffer) < 5 * self.replay_buffer.batch_size:
+
+            if is_done:
+                # end of episode
+                scores.append(score)
+                score = 0
+                state = self.env.reset()
+
+            if len(self.replay_buffer) < 10 * self.replay_buffer.batch_size:
                 continue
 
             # training
@@ -121,18 +128,13 @@ class Agent(ABC):
 
             # logging
             if i % 1000 == 0:
-                mean_score = np.array(scores).mean() if len(scores) > 0 else 0
+                scores = scores[max(0, len(scores) - 10):]
+                mean_score = np.array(scores).mean()
                 mean_loss = np.array(losses).mean()
                 log.info(f'Step {i} - Score: {mean_score} | Loss: {mean_loss}')
-                self.tb_writer.add_scalar('Score', mean_score, i)
+                self.tb_writer.add_scalar('Score (last 10 episodes)', mean_score, i)
                 self.tb_writer.add_scalar('Loss', mean_loss, i)
                 self.tb_writer.add_scalar('Eps', self.eps, i)
                 losses = []
-                scores = []
             if i % 100000 == 0:
                 self._save_state(os.path.join(os.getcwd(), f'checkpoint_step_{i}'))
-            if is_done:
-                # end of episode
-                scores.append(score)
-                score = 0
-                state = self.env.reset()
