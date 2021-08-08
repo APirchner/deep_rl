@@ -28,13 +28,13 @@ class DoubleDQN(Agent):
 
     @torch.no_grad()
     def _select_action(self, state: torch.Tensor) -> int:
-        state_tensor = torch.unsqueeze(state, 0).to(self.device)
-        action = self.dqn(state_tensor).argmax().detach().cpu().item()
+        state_tensor = torch.unsqueeze(state, 0).to(self.device) / 255.
+        action = self.dqn(state_tensor).argmax(axis=1).item()
         return action
 
-    def _loss(self, sample_steps: Transition) -> torch.Tensor:
-        state = sample_steps.state.float().to(self.device)
-        next_state = sample_steps.next_state.float().to(self.device)
+    def _loss(self, sample_steps: Transition) -> Tuple[torch.Tensor, torch.Tensor]:
+        state = sample_steps.state.float().to(self.device) / 255.
+        next_state = sample_steps.next_state.float().to(self.device) / 255.
         action = sample_steps.action.reshape(-1, 1).to(self.device)
         reward = sample_steps.reward.reshape(-1, 1).to(self.device)
         done = sample_steps.done.reshape(-1, 1).to(self.device)
@@ -42,9 +42,9 @@ class DoubleDQN(Agent):
         # required for parameter update - eq (1) in paper
         q_current = self.dqn(state).gather(1, action)  # get action values
         q_next = self._target_forward(next_state)
-        target = (reward + self.gamma * (1 - done) * q_next).float().to(self.device)
+        target = (reward + self.gamma * (1 - done) * q_next).float()
         loss = F.smooth_l1_loss(q_current, target).float()
-        return loss
+        return loss, q_current
 
     @torch.no_grad()
     def _target_forward(self, next_state: torch.Tensor) -> torch.Tensor:
@@ -52,12 +52,12 @@ class DoubleDQN(Agent):
             1, self.dqn(next_state).argmax(dim=1, keepdim=True))
         return q_next
 
-    def _train_step(self, sample_steps: Transition) -> float:
-        loss = self._loss(sample_steps)
+    def _train_step(self, sample_steps: Transition) -> Tuple[float, float]:
+        loss, q_current = self._loss(sample_steps)
         self.optimizer.zero_grad()
         loss.backward()
         self.optimizer.step()
-        return loss.detach().cpu().item()
+        return loss.detach().cpu().item(), q_current.detach().mean().cpu().item()
 
     def _update_target(self):
         self.dqn_target.load_state_dict(self.dqn.state_dict())
@@ -67,3 +67,9 @@ class DoubleDQN(Agent):
             'model_state_dict': self.dqn.state_dict(),
             'optimizer_state_dict': self.optimizer.state_dict()
         }, path)
+
+    def _eval(self):
+        self.dqn.eval()
+
+    def _train(self):
+        self.dqn.train()

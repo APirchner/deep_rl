@@ -24,6 +24,7 @@ class Agent(ABC):
             eps: float,
             eps_min: float,
             update_steps: int,
+            learn_period: int,
             test: bool = False,
             cuda: bool = True
     ):
@@ -34,6 +35,7 @@ class Agent(ABC):
         self.eps = eps
         self.eps_min = eps_min
         self.update_steps = update_steps
+        self.learn_period = learn_period
         self.test = test
         self.tb_writer = SummaryWriter()
         self.device = torch.device(
@@ -41,11 +43,11 @@ class Agent(ABC):
         )
 
     @abstractmethod
-    def _loss(self, sample_steps: Transition) -> torch.Tensor:
+    def _loss(self, sample_steps: Transition) -> Tuple[torch.Tensor, torch.Tensor]:
         raise NotImplementedError('_loss')
 
     @abstractmethod
-    def _train_step(self, sample_steps: Transition) -> float:
+    def _train_step(self, sample_steps: Transition) -> Tuple[float, float]:
         raise NotImplementedError('_train_step')
 
     @abstractmethod
@@ -59,6 +61,14 @@ class Agent(ABC):
     @abstractmethod
     def _save_state(self, path: str):
         raise NotImplementedError('_save_state')
+
+    @abstractmethod
+    def _train(self):
+        pass
+
+    @abstractmethod
+    def _eval(self):
+        pass
 
     def _write_to_buffer(
             self,
@@ -100,13 +110,15 @@ class Agent(ABC):
         eps_decay = 5 * (self.eps - self.eps_min) / frames
         scores = []
         losses = []
+        mean_qs = []
         score = 0
 
         state = self.env.reset()
         for i in range(frames):
-            state_next, reward, is_done, info = self.step(state.__array__())
-            self.eps = self.eps - eps_decay
+            state_next, reward, is_done, info = self.step(state)
+            state = state_next
             score += reward
+            self.eps = self.eps - eps_decay
 
             if is_done:
                 # end of episode
@@ -114,27 +126,51 @@ class Agent(ABC):
                 score = 0
                 state = self.env.reset()
 
-            if len(self.replay_buffer) < 10 * self.replay_buffer.batch_size:
+            if len(self.replay_buffer) < 10_000:
                 continue
 
-            # training
-            batch = self.replay_buffer.sample()
-            loss = self._train_step(batch)
-            losses.append(loss)
+            if i % self.learn_period == 0:
+                # training
+                batch = self.replay_buffer.sample()
+                loss, mean_q = self._train_step(batch)
+                losses.append(loss)
+                mean_qs.append(mean_q)
 
             # target update
             if i % self.update_steps == 0:
                 self._update_target()
 
             # logging
-            if i % 1000 == 0:
+            if i % 1_000 == 0:
                 scores = scores[max(0, len(scores) - 10):]
                 mean_score = np.array(scores).mean()
                 mean_loss = np.array(losses).mean()
+                mean_q = np.array(mean_qs).mean()
                 log.info(f'Step {i} - Score: {mean_score} | Loss: {mean_loss}')
                 self.tb_writer.add_scalar('Score (last 10 episodes)', mean_score, i)
                 self.tb_writer.add_scalar('Loss', mean_loss, i)
+                self.tb_writer.add_scalar('Q estimate', mean_q, i)
                 self.tb_writer.add_scalar('Eps', self.eps, i)
                 losses = []
-            if i % 100000 == 0:
+                mean_qs = []
+            if i % 100_000 == 0:
                 self._save_state(os.path.join(os.getcwd(), f'checkpoint_step_{i}'))
+        self.env.close()
+
+    def evaluate(self) -> float:
+        eps_train = self.eps
+        eps_min = self.eps_min
+        self.eps = 0.001
+        self.eps_min = 0.
+        self._eval()
+        state = self.env.reset()
+        score = 0
+        is_done = False
+        while not is_done:
+            state, reward, is_done, _ = self.step(state)
+            score += reward
+        self.eps = eps_train
+        self.eps_min = eps_min
+        self._train()
+        self.env.reset()
+        return score

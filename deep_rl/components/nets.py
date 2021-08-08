@@ -9,16 +9,14 @@ class QNet(nn.Module):
         c, h, w = input_dim
         assert h == w
 
-        flat_size = 64 * (((((((h - 8) // 4 + 1) - 3) // 2 + 1) - 3) // 2 + 1) - 2) ** 2
+        flat_size = 64 * (((((h - 8) // 4 + 1) - 4) // 2 + 1) - 2) ** 2
 
         self.net = nn.Sequential(
-            nn.utils.weight_norm(nn.Conv2d(in_channels=c, out_channels=32, kernel_size=8, stride=4)),
+            nn.Conv2d(in_channels=c, out_channels=32, kernel_size=8, stride=4),
             nn.ReLU(),
-            nn.utils.weight_norm(nn.Conv2d(in_channels=32, out_channels=64, kernel_size=3, stride=2)),
+            nn.Conv2d(in_channels=32, out_channels=64, kernel_size=4, stride=2),
             nn.ReLU(),
-            nn.utils.weight_norm(nn.Conv2d(in_channels=64, out_channels=64, kernel_size=3, stride=2)),
-            nn.ReLU(),
-            nn.utils.weight_norm(nn.Conv2d(in_channels=64, out_channels=64, kernel_size=3, stride=1)),
+            nn.Conv2d(in_channels=64, out_channels=64, kernel_size=3, stride=1),
             nn.ReLU(),
             nn.Flatten(),
             nn.Linear(in_features=flat_size, out_features=512),

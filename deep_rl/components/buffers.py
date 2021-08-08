@@ -21,9 +21,9 @@ class ReplayBuffer:
         return Transition(
             state=torch.stack([b.state for b in batch]),
             next_state=torch.stack([b.next_state for b in batch]),
-            action=torch.stack([b.action for b in batch]),
-            reward=torch.stack([b.reward for b in batch]),
-            done=torch.stack([b.done for b in batch])
+            action=torch.stack([b.action for b in batch]).squeeze(),
+            reward=torch.stack([b.reward for b in batch]).squeeze(),
+            done=torch.stack([b.done for b in batch]).squeeze()
         )
 
     def __len__(self):

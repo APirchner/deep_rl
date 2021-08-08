@@ -4,6 +4,7 @@ import numpy as np
 import torch
 from torchvision import transforms as T
 import gym
+from gym.spaces import Box
 from nes_py.wrappers import JoypadSpace
 import gym_super_mario_bros
 from gym_super_mario_bros.actions import RIGHT_ONLY
@@ -32,12 +33,15 @@ class PermuteObservation(gym.ObservationWrapper):
     def __init__(self, env: gym.Env):
         super(PermuteObservation, self).__init__(env)
 
-    def _permute(self, observation: np.ndarray) -> torch.Tensor:
+        obs_shape = self.observation_space.shape[:2]
+        self.observation_space = Box(low=0, high=255, shape=obs_shape, dtype=np.uint8)
+
+    def _permute(self, observation: np.ndarray) -> np.ndarray:
         obs = torch.tensor(observation.copy())
         obs = torch.permute(obs, (2, 0, 1))
         return obs
 
-    def observation(self, observation: np.ndarray) -> torch.Tensor:
+    def observation(self, observation: np.ndarray) -> np.ndarray:
         return self._permute(observation)
 
 
@@ -46,12 +50,15 @@ class GrayScaleResizeObservation(gym.ObservationWrapper):
         super(GrayScaleResizeObservation, self).__init__(env)
         self._size = size
 
-    def observation(self, observation: torch.Tensor):
+        obs_shape = self.observation_space.shape[:2]
+        self.observation_space = Box(low=0, high=255, shape=obs_shape, dtype=np.uint8)
+
+    def observation(self, observation: np.ndarray):
         transform = T.Compose([
-            T.Resize((self._size, self._size), ),
-            T.Grayscale()
+            T.Resize((self._size, self._size)),
+            T.Grayscale(),
         ])
-        return transform(observation).squeeze()
+        return transform(observation).squeeze(0)
 
 def get_environment(frame_size: int, path: str, random_stages: bool = True, seed: int = 170990) -> gym.Env:
     if random_stages:
