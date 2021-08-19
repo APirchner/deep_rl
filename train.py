@@ -29,7 +29,6 @@ def train(cfg: DictConfig) -> None:
         _recursive_=False
     )
     agent.train(cfg.trainer.frames)
-    env.close()
 
 
 if __name__ == '__main__':
