@@ -64,11 +64,15 @@ class Agent(ABC):
 
     @abstractmethod
     def _train(self):
-        pass
+        raise NotImplementedError('_train')
 
     @abstractmethod
     def _eval(self):
-        pass
+        raise NotImplementedError('_eval')
+
+    @abstractmethod
+    def load(self, path: str) -> None:
+        raise NotImplementedError('load')
 
     def _write_to_buffer(
             self,
@@ -156,21 +160,3 @@ class Agent(ABC):
             if i % 100_000 == 0:
                 self._save_state(os.path.join(os.getcwd(), f'checkpoint_step_{i}'))
         self.env.close()
-
-    def evaluate(self) -> float:
-        eps_train = self.eps
-        eps_min = self.eps_min
-        self.eps = 0.001
-        self.eps_min = 0.
-        self._eval()
-        state = self.env.reset()
-        score = 0
-        is_done = False
-        while not is_done:
-            state, reward, is_done, _ = self.step(state)
-            score += reward
-        self.eps = eps_train
-        self.eps_min = eps_min
-        self._train()
-        self.env.reset()
-        return score

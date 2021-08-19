@@ -68,6 +68,10 @@ class DoubleDQN(Agent):
             'optimizer_state_dict': self.optimizer.state_dict()
         }, path)
 
+    def load(self, path: str) -> None:
+        checkpoint = torch.load(path)
+        self.dqn.load_state_dict(checkpoint['model_state_dict'])
+
     def _eval(self):
         self.dqn.eval()
 
