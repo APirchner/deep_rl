@@ -6,6 +6,10 @@ trainer:
   observation_size: 84
   random_stage: False
 
+tester:
+  seed: 1234
+  path: ""
+
 defaults:
   - agent: ddqn
   - optim: adam
