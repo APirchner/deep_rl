@@ -111,7 +111,7 @@ class Agent(ABC):
 
     def train(self, frames: int):
         self.test = False
-        eps_decay = 5 * (self.eps - self.eps_min) / frames
+        eps_decay = 10 * (self.eps - self.eps_min) / frames
         scores = []
         losses = []
         mean_qs = []

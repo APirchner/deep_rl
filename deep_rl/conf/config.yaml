@@ -1,14 +1,15 @@
 trainer:
   seed: 1234
   cuda: True
-  frames: 10_000_000
+  frames: 20_000_000
   stack_frames: 4
   observation_size: 84
-  random_stage: False
+  random_stage: True
 
 tester:
   seed: 1234
   path: ""
+  random_stage: False
 
 defaults:
   - agent: ddqn

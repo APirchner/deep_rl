@@ -4,8 +4,8 @@ _args_:
   - optim_conf
 buffer_size: 100_000
 batch_size: 32
-gamma: 0.9
+gamma: 0.99
 eps: 1.0
 eps_min: 0.01
-update_steps: 10_000
+update_steps: 30_000
 learn_period: 3
